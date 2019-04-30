@@ -1,0 +1,35 @@
+FROM centos:centos7
+MAINTAINER Suwat Saisema <suwat_sai@hotmail.com>
+
+# Install wget 
+RUN yum -y install wget
+
+# Add Kamailio repositories
+RUN cd /etc/yum.repos.d/
+RUN wget -O /etc/yum.repos.d/home:kamailio:v5.2.x-rpms.repo http://download.opensuse.org/repositories/home:/kamailio:/v5.2.x-rpms/CentOS_7/home:kamailio:v5.2.x-rpms.repo
+
+# Install Kamailio
+RUN yum -y update
+RUN yum -y install kamailio kamailio-debuginfo kamailio-utils gdb kamailio-sqlite
+
+WORKDIR /etc/kamailio/
+COPY kamailio.cfg /etc/kamailio
+
+RUN echo "DBENGINE=SQLITE" >> kamctlrc
+RUN echo "DBHOST=localhost" >> kamctlrc
+RUN echo "DB_PATH="/usr/local/etc/kamailio/kamailio.sqlite"" >> kamctlrc
+RUN echo "INSTALL_EXTRA_TABLES=no" >> kamctlrc
+RUN echo "INSTALL_PRESENCE_TABLES=no" >> kamctlrc
+RUN echo "INSTALL_DBUID_TABLES=no" >> kamctlrc
+
+RUN mkdir /usr/local/etc/kamailio
+RUN touch /usr/local/etc/kamailio/kamailio.sqlite
+
+RUN /usr/sbin/kamdbctl create
+
+RUN /usr/sbin/kamctl add 1000@mydomain.com 1000
+RUN /usr/sbin/kamctl add 1001@mydomain.com 1001
+
+EXPOSE 5060/udp 
+
+CMD ["/usr/sbin/kamailio", "-DD", "-P", "/var/run/kamailio.pid", "-f", "/etc/kamailio/kamailio.cfg"]
